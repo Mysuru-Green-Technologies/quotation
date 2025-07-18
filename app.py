@@ -38,10 +38,10 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 app.secret_key = 'prakruthi' 
 
 # MySQL Configuration
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'root'
-app.config['MYSQL_DB'] = 'userre'
+app.config['MYSQL_HOST'] = '192.168.0.174'
+app.config['MYSQL_USER'] = 'remote_control'
+app.config['MYSQL_PASSWORD'] = 'Remote_control'
+app.config['MYSQL_DB'] = 'quotation_data'
 
 mysql = MySQL(app)
 
