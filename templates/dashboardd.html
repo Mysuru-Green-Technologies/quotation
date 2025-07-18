@@ -1,0 +1,183 @@
+{% extends "dashboard.html" %}
+<div class="content-area">
+    {% block content %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboardd.css') }}">
+
+    <header class="header">
+            <div class="page-title">Dashboard</div>
+            <div class="header-actions">
+                <button class="search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button class="notification-btn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </button>
+            </div>
+        </header>
+            <div class="welcome-card">
+                <h2>Welcome back, {{ session['name'] }}!</h2>
+                <p>Here's what's happening with your quotations today. You have {{ sent }} sent quotes that need attention.</p>
+
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                        <div>
+                            <div class="stat-title">Total Quotations</div>
+                             <div class="stat-value" id="totalQuotations">{{ total_quotations }}</div>
+                        </div>
+                    </div>
+                       <div class="stat-change {% if total_direction == 'up' %}up{% elif total_direction == 'down' %}down{% else %}neutral{% endif %}">
+            {% if total_direction == 'up' %}
+                <i class="fas fa-arrow-up"></i> {{ total_change }}% from last month
+            {% elif total_direction == 'down' %}
+                <i class="fas fa-arrow-down"></i> {{ total_change }}% from last month
+            {% else %}
+                <i class="fas fa-minus"></i> No change from last month
+            {% endif %}
+        </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div>
+                            <div class="stat-title">Accepted</div>
+                            <div class="stat-value">{{ accepted }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-change {% if accepted_direction == 'up' %}up{% elif accepted_direction == 'down' %}down{% else %}neutral{% endif %}">
+            {% if accepted_direction == 'up' %}
+                <i class="fas fa-arrow-up"></i> {{ accepted_change }}% from last month
+            {% elif accepted_direction == 'down' %}
+                <i class="fas fa-arrow-down"></i> {{ accepted_change }}% from last month
+            {% else %}
+                <i class="fas fa-minus"></i> No change from last month
+            {% endif %}
+        </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <div class="stat-title">Sent</div>
+                            <div class="stat-value">{{ sent }}</div>
+                        </div>
+                    </div>
+                    <div class="stat-change {% if sent_direction == 'up' %}up{% elif sent_direction == 'down' %}down{% else %}neutral{% endif %}">
+            {% if sent_direction == 'up' %}
+                <i class="fas fa-arrow-up"></i> {{ sent_change }}% from last month
+            {% elif sent_direction == 'down' %}
+                <i class="fas fa-arrow-down"></i> {{ sent_change }}% from last month
+            {% else %}
+                <i class="fas fa-minus"></i> No change from last month
+            {% endif %}
+        </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div>
+                            <div class="stat-title">Declined</div>
+                            <div class="stat-value">{{ declined }}</div>
+                        </div>
+                    </div>
+                     <div class="stat-change {% if declined_direction == 'up' %}up{% elif declined_direction == 'down' %}down{% else %}neutral{% endif %}">
+            {% if declined_direction == 'up' %}
+                <i class="fas fa-arrow-up"></i> {{ declined_change }}% from last month
+            {% elif declined_direction == 'down' %}
+                <i class="fas fa-arrow-down"></i> {{ declined_change }}% from last month
+            {% else %}
+                <i class="fas fa-minus"></i> No change from last month
+            {% endif %}
+        </div>
+                </div>
+            </div>
+            
+            <div class="recent-quotes">
+                <div class="section-header">
+                    <h3 class="section-title">Recent Quotations</h3>
+</div>
+
+
+<script>
+
+function updateTotalQuotations() {
+    fetch('/api/total_quotations')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('totalQuotations').textContent = data.total_quotations;
+        })
+        .catch(error => console.error('Error fetching total quotations:', error));
+}
+
+// Run initially and then every 10 seconds
+updateTotalQuotations();
+setInterval(updateTotalQuotations, 10000);
+
+  function toggleDropdown() {
+    const dropdown = document.getElementById("quotationDropdown");
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  }
+
+  // Hide dropdown if clicked outside
+  window.onclick = function(event) {
+    if (!event.target.matches('.btn') && !event.target.closest('.dropdown')) {
+      const dropdown = document.getElementById("quotationDropdown");
+      if (dropdown) dropdown.style.display = "none";
+    }
+  }
+</script>  
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Quote ID</th>
+                            <th>Client</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>   
+                    </thead>
+                    <tbody>
+    {% for quote in recent_quotations %}
+    <tr>
+        <td>{{ quote[0] }}</td>
+        <td>{{ quote[1] }}</td>
+        <td>{{ quote[2].strftime('%b %d, %Y') if quote[2] else '—' }}</td>
+        <td>₹ {{ "{:,.2f}".format(quote[3]) }}</td>
+        <td>
+            <span class="status-badge status-{{ quote[4]|lower|replace(' ', '-') }}">
+                {{ quote[4] }}
+            </span>
+        </td>
+        <td>
+            <button class="action-btn" title="View"><i class="fas fa-eye"></i></button>
+            <button class="action-btn" title="Edit"><i class="fas fa-edit"></i></button>
+            <button class="action-btn" title="Download"><i class="fas fa-download"></i></button>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+
+
+                </table>
+            </div>
+        </div>
+    </main>
+    {% endblock %}
+</div>

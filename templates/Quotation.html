@@ -1,0 +1,548 @@
+{% extends "dashboard.html" %}
+{% block content %}
+
+
+    <title>Quotation Generator</title>
+    <style>
+        /* Base Styles */
+        :root {
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --primary-light: #e0e7ff;
+    --light: #f8fafc;
+    --dark: #1e293b;
+    --gray: #64748b;
+    --gray-light: #e2e8f0;
+    --error: #ef4444;
+    --border-radius: 8px;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Container Styles */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 25px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            box-sizing: border-box;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 22px;
+            color: #2c3e50;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        /* Form Styles */
+        .customer-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 6px;
+            color: #495057;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid var(--gray-light);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            background-color: white;
+            height: 36px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+            outline: none;
+        }
+
+        .form-group.subject {
+            grid-column: span 2;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 13px;
+        }
+
+        table th, table td {
+            padding: 8px 10px;
+            border: 1px solid var(--gray-light);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        table th {
+            background-color: var(gray);
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        table input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--gray-light);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 13px;
+            height: 30px;
+        }
+
+        table input[type="checkbox"] {
+            width: auto;
+            margin: 0 auto;
+            display: block;
+            height: auto;
+        }
+
+        table input[readonly] {
+            background-color: #f5f5f5;
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 8px 14px;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background-color: #3a7bc8;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background-color: var(--error);
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+            transform: translateY(-1px);
+        }
+
+        /* Action Buttons Container */
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        /* Utility Classes */
+        .text-bold {
+            font-weight: bold;
+        }
+
+        .text-large {
+            font-size: 1.1em;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .customer-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-group.subject {
+                grid-column: span 1;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            table th, table td {
+                padding: 6px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Quotation Generator</h2>
+
+        <!-- Customer Details Form -->
+        <div class="customer-details">
+            <div class="form-group">
+                <label for="salutation">Salutation</label>
+                <select id="salutation" required>
+                    <option value="Mr">Mr</option>
+                    <option value="Mrs">Mrs</option>
+                    <option value="Ms">Ms</option>
+                    <option value="Dr">Dr</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="customer-name">Customer Name</label>
+                <input type="text" id="customer-name" placeholder="Customer name" required oninput="capitalizeFirstLetter(this)">
+            </div>
+
+            <div class="form-group">
+                <label for="customer-place">Place</label>
+                <input type="text" id="customer-place" placeholder="City/State" required oninput="capitalizeFirstLetter(this)">
+            </div>
+
+            <div class="form-group">
+                <label for="customer-email">Email</label>
+                <input type="email" id="customer-email" placeholder="email@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="customer-phone">Phone</label>
+                <input type="tel" id="customer-phone" placeholder="Phone number">
+            </div>
+
+            <div class="form-group subject">
+                <label for="subject">Subject</label>
+                <input type="text" id="subject" placeholder="Subject of the quotation" required oninput="capitalizeFirstLetter(this)">
+            </div>
+
+            <div class="form-group">
+                <label for="greeting">Greeting</label>
+                <select id="greeting" required>
+                    <option value="Dear Sir">Dear Sir</option>
+                    <option value="Dear Madam">Dear Madam</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Item Table -->
+        <table id="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%">S.No.</th>
+                    <th style="width: 30%">Description</th>
+                    <th style="width: 7%">Qty</th>
+                    <th style="width: 10%">Price</th>
+                    <th style="width: 7%">GST %</th>
+                    <th style="width: 10%">GST Amt</th>
+                    <th style="width: 12%">Total</th>
+                    <th style="width: 10%">Actuals</th>
+                    <th style="width: 9%">Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+            <button class="btn btn-primary" onclick="addItem()">Add Item</button>
+            <div>
+                <span class="text-bold" style="margin-right: 15px;">Grand Total: <span id="grand-total" class="text-large">0.00</span></span>
+                <button class="btn btn-success" onclick="generatePDF()">Generate Quotation</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let itemCount = 1;
+
+        // DOM Ready Function
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add initial item if table is empty
+            if (document.querySelectorAll("#items-table tbody tr").length === 0) {
+                addItem();
+            }
+        });
+
+        // Add a new item row to the table
+        function addItem() {
+            const tableBody = document.querySelector("#items-table tbody");
+            const row = tableBody.insertRow();
+
+            row.innerHTML = `
+                <td>${itemCount}</td>
+                <td><input type="text" class="description" placeholder="Item description" required></td>
+                <td><input type="number" class="quantity" placeholder="0" min="0" step="1" onchange="updateItemTotal(this)"></td>
+                <td><input type="number" class="price" placeholder="0.00" min="0" step="0.01" onchange="updateItemTotal(this)"></td>
+                <td><input type="number" class="gst" placeholder="0%" min="0" step="0.01" onchange="updateItemTotal(this)"></td>
+                <td><input type="text" class="gst-amount" readonly></td>
+                <td><input type="text" class="total" readonly></td>
+                <td><input type="checkbox" class="as-per-actuals" onchange="toggleAsPerActuals(this)"></td>
+                <td class="text-center"><button class="btn btn-danger" onclick="removeItem(this)">Remove</button></td>
+            `;
+
+            itemCount++;
+        }
+
+        // Toggle "As per actuals" state for an item
+        function toggleAsPerActuals(checkbox) {
+            const row = checkbox.closest('tr');
+            const quantity = row.querySelector('.quantity');
+            const price = row.querySelector('.price');
+            const gst = row.querySelector('.gst');
+            const gstAmount = row.querySelector('.gst-amount');
+            const total = row.querySelector('.total');
+            const description = row.querySelector('.description');
+
+            if (checkbox.checked) {
+                // Clear and disable numeric fields
+                quantity.value = "";
+                price.value = "";
+                gst.value = "";
+                gstAmount.value = "Actuals";
+                total.value = "Actuals";
+
+                quantity.disabled = true;
+                price.disabled = true;
+                gst.disabled = true;
+
+                // Update description to include "As per actuals" if not already present
+                if (!description.value.includes("As per actuals")) {
+                    description.value = description.value.trim() + " (As per actuals)";
+                }
+            } else {
+                // Clear and enable numeric fields
+                quantity.value = "";
+                price.value = "";
+                gst.value = "";
+                gstAmount.value = "";
+                total.value = "";
+
+                quantity.disabled = false;
+                price.disabled = false;
+                gst.disabled = false;
+
+                // Remove "As per actuals" from description if present
+                description.value = description.value.replace("(As per actuals)", "").trim();
+            }
+
+            calculateTotal();
+        }
+
+        // Update item totals when values change
+        function updateItemTotal(input) {
+            const row = input.closest('tr');
+            const checkbox = row.querySelector('.as-per-actuals');
+
+            // Skip calculation if "As per actuals" is checked
+            if (checkbox.checked) return;
+
+            const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+            const price = parseFloat(row.querySelector('.price').value) || 0;
+            const gstPercentage = parseFloat(row.querySelector('.gst').value) || 0;
+
+            const gstAmount = (quantity * price * gstPercentage) / 100;
+            const total = (quantity * price) + gstAmount;
+
+            row.querySelector('.gst-amount').value = gstAmount.toFixed(2);
+            row.querySelector('.total').value = total.toFixed(2);
+
+            calculateTotal();
+        }
+
+        // Remove an item row
+        function removeItem(button) {
+            const row = button.closest('tr');
+            row.remove();
+
+            // Renumber serial numbers
+            const rows = document.querySelectorAll("#items-table tbody tr");
+            rows.forEach((row, index) => {
+                row.cells[0].textContent = index + 1;
+            });
+
+            itemCount = rows.length + 1;
+            calculateTotal();
+        }
+
+        // Calculate grand total
+        function calculateTotal() {
+            let grandTotal = 0;
+            const rows = document.querySelectorAll("#items-table tbody tr");
+
+            rows.forEach(row => {
+                const checkbox = row.querySelector('.as-per-actuals');
+                const totalInput = row.querySelector('.total');
+
+                // Skip "As per actuals" items in total calculation
+                if (!checkbox.checked && totalInput.value !== "Actuals") {
+                    const total = parseFloat(totalInput.value) || 0;
+                    grandTotal += total;
+                }
+            });
+
+            document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
+        }
+
+        // Generate PDF by sending data to server
+        function generatePDF() {
+            // Validate required fields
+            const salutation = document.getElementById('salutation').value;
+            const customerName = document.getElementById('customer-name').value;
+            const customerPlace = document.getElementById('customer-place').value;
+            const subject = document.getElementById('subject').value;
+            const greeting = document.getElementById('greeting').value;
+
+            if (!customerName || !customerPlace || !subject) {
+                alert("Please fill in all required customer details");
+                return;
+            }
+
+            // Validate at least one item exists
+            const rows = document.querySelectorAll("#items-table tbody tr");
+            if (rows.length === 0) {
+                alert("Please add at least one item to the quotation");
+                return;
+            }
+
+            // Prepare items data
+            const itemsData = [];
+            let hasInvalidItems = false;
+
+            rows.forEach(row => {
+                const description = row.querySelector('.description').value;
+                const checkbox = row.querySelector('.as-per-actuals');
+                const isAsPerActuals = checkbox.checked;
+
+                // Validate item description
+                if (!description) {
+                    hasInvalidItems = true;
+                    row.querySelector('.description').style.border = "1px solid red";
+                    return;
+                } else {
+                    row.querySelector('.description').style.border = "";
+                }
+
+                // For non-"As per actuals" items, validate numeric fields
+                if (!isAsPerActuals) {
+                    const quantity = row.querySelector('.quantity').value;
+                    const price = row.querySelector('.price').value;
+                    const gst = row.querySelector('.gst').value;
+
+                    if (!quantity || !price || !gst) {
+                        hasInvalidItems = true;
+                        if (!quantity) row.querySelector('.quantity').style.border = "1px solid red";
+                        if (!price) row.querySelector('.price').style.border = "1px solid red";
+                        if (!gst) row.querySelector('.gst').style.border = "1px solid red";
+                        return;
+                    } else {
+                        row.querySelector('.quantity').style.border = "";
+                        row.querySelector('.price').style.border = "";
+                        row.querySelector('.gst').style.border = "";
+                    }
+                }
+
+                itemsData.push({
+                    serial_no: row.cells[0].textContent,
+                    description: description,
+                    quantity: isAsPerActuals ? null : parseFloat(row.querySelector('.quantity').value) || 0,
+                    price: isAsPerActuals ? null : parseFloat(row.querySelector('.price').value) || 0,
+                    gst_percentage: isAsPerActuals ? null : parseFloat(row.querySelector('.gst').value) || 0,
+                    gst_amount: isAsPerActuals ? null : parseFloat(row.querySelector('.gst-amount').value) || 0,
+                    total: isAsPerActuals ? null : parseFloat(row.querySelector('.total').value) || 0,
+                    is_as_per_actuals: isAsPerActuals
+                });
+            });
+
+            if (hasInvalidItems) {
+                alert("Please fill in all required fields for items");
+                return;
+            }
+
+            // Prepare quotation data
+            const quotationData = {
+                salutation: salutation,
+                customer_name: customerName,
+                customer_village: customerPlace,
+                customer_email: document.getElementById('customer-email').value,
+                customer_phone: document.getElementById('customer-phone').value,
+                subject: subject,
+                greeting: greeting,
+                total_amount: parseFloat(document.getElementById('grand-total').textContent),
+                items: itemsData
+            };
+
+            // Send data to server
+            fetch("/generate_pdf", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(quotationData)
+            })
+            .then(handleResponse)
+            .then(handlePDFDownload)
+            .catch(handleError);
+        }
+
+        // Handle fetch response
+        function handleResponse(response) {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.blob();
+        }
+
+        // Handle PDF download
+        function handlePDFDownload(blob) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'quotation.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        // Handle errors
+        function handleError(error) {
+            console.error("Error:", error);
+            alert("An error occurred while generating the quotation. Please try again.");
+        }
+
+        // Capitalize first letter of input
+        function capitalizeFirstLetter(input) {
+            let value = input.value;
+            if (value.length > 0) {
+                input.value = value.charAt(0).toUpperCase() + value.slice(1);
+            }
+        }
+    </script>
+
+
+{% endblock %}

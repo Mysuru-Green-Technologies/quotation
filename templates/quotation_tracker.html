@@ -1,0 +1,526 @@
+{% extends "dashboard.html" %}
+{% block content %}
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-6">Quotation Tracking System</h1>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary" onclick="filterQuotations('all')">All</button>
+                        <button class="btn btn-outline-primary" onclick="filterQuotations('Sent')">Sent</button>
+                        <button class="btn btn-outline-success" onclick="filterQuotations('Accepted')">Accepted</button>
+                        <button class="btn btn-outline-danger" onclick="filterQuotations('Declined')">Declined</button>
+                    </div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newReminderModal">
+                        <i class="bi bi-bell-fill"></i> Create Reminder
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Quotations</h5>
+                        <div class="input-group" style="width: 300px;">
+                            <input type="text" id="searchQuotations" class="form-control" placeholder="Search...">
+                            <button class="btn btn-outline-secondary" type="button">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="quotationsList" class="list-group">
+                            <!-- Quotations will be loaded here -->
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Upcoming Reminders</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="remindersList">
+                            <!-- Reminders will be loaded here -->
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quotation Details Modal -->
+    <div class="modal fade" id="quotationDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quotationTitle">Quotation Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Client Information</h6>
+                            <div id="clientInfo"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Status & Outcome</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <select id="statusSelect" class="form-select">
+                                    <option value="Draft">Draft</option>
+                                    <option value="Sent">Sent</option>
+                                    <option value="Accepted">Accepted</option>
+                                    <option value="Declined">Declined</option>
+                                    <option value="Revised">Revised</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Outcome</label>
+                                <select id="outcomeSelect" class="form-select">
+                                    <option value="Pending">Pending</option>
+                                    <option value="Won">Won</option>
+                                    <option value="Lost">Lost</option>
+                                    <option value="Negotiating">Negotiating</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Follow-Up Date</label>
+                                <input type="date" id="followUpDate" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Notes</label>
+                                <textarea id="quotationNotes" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>Items</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Description</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>GST</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotationItems">
+                                <!-- Items will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>History</h6>
+                    <div class="timeline" id="quotationHistory">
+                        <!-- History will be loaded here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveQuotationChanges()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Reminder Modal -->
+    <div class="modal fade" id="newReminderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Reminder</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Quotation</label>
+                        <select id="reminderQuotation" class="form-select">
+                            <!-- Options will be loaded dynamically -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reminder Type</label>
+                        <select id="reminderType" class="form-select">
+                            <option value="Follow Up">Follow Up</option>
+                            <option value="Revision Due">Revision Due</option>
+                            <option value="Payment Due">Payment Due</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reminder Date</label>
+                        <input type="date" id="reminderDate" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea id="reminderNotes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createReminder()">Create Reminder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let currentQuotationId = null;
+        let quotations = [];
+        let reminders = [];
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadQuotations();
+            loadReminders();
+            loadQuotationOptions();
+        });
+
+        // Load all quotations
+        function loadQuotations(filter = 'all') {
+            fetch('/api/quotations')
+                .then(response => response.json())
+                .then(data => {
+                    quotations = data;
+                    renderQuotations(filter);
+                })
+                .catch(error => {
+                    console.error('Error loading quotations:', error);
+                    document.getElementById('quotationsList').innerHTML = `
+                        <div class="alert alert-danger">Failed to load quotations. Please try again.</div>
+                    `;
+                });
+        }
+
+        // Filter quotations
+        function filterQuotations(status) {
+            renderQuotations(status);
+        }
+
+        // Render quotations based on filter
+        function renderQuotations(filter) {
+            const container = document.getElementById('quotationsList');
+            container.innerHTML = '';
+            
+            const filtered = filter === 'all' 
+                ? quotations 
+                : quotations.filter(q => q.status === filter);
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No quotations found</div>';
+                return;
+            }
+            
+            filtered.forEach(quotation => {
+                const card = document.createElement('div');
+                card.className = `list-group-item list-group-item-action quotation-card status-${quotation.status.toLowerCase()}`;
+                card.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${quotation.quotation_number} - ${quotation.customer_name}</h6>
+                        <small>${new Date(quotation.created_at).toLocaleDateString()}</small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-${getStatusBadgeColor(quotation.status)} me-2">
+                                ${quotation.status}
+                            </span>
+                            <span class="badge ${getOutcomeBadgeClass(quotation.outcome)}">
+                                ${quotation.outcome || 'Pending'}
+                            </span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="viewQuotationDetails(${quotation.id})">
+                            <i class="bi bi-eye"></i> View
+                        </button>
+                    </div>
+                    ${quotation.follow_up_date ? `
+                    <small class="text-muted">
+                        Follow-up: ${new Date(quotation.follow_up_date).toLocaleDateString()}
+                    </small>
+                    ` : ''}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // View quotation details
+        // View quotation details - updated error handling
+function viewQuotationDetails(id) {
+    currentQuotationId = id;
+    fetch(`/api/quotations/${id}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            const q = data.quotation;
+
+            // Safely format total amount
+            const totalFormatted = (typeof q.total_amount === 'number') 
+                ? `₹${q.total_amount.toFixed(2)}` 
+                : '₹0.00';
+
+            // Set modal title
+            document.getElementById('quotationTitle').textContent =
+                `${q.quotation_number} - ${q.name}`;
+
+            // Set client info
+            document.getElementById('clientInfo').innerHTML = `
+                <p class="mb-1"><strong>Name:</strong> ${q.customer_name}</p>
+                <p class="mb-1"><strong>Village:</strong> ${q.customer_village}</p>
+                <p class="mb-1"><strong>Email:</strong> ${q.customer_email || 'N/A'}</p>
+                <p class="mb-1"><strong>Phone:</strong> ${q.customer_phone}</p>
+                <p class="mb-1"><strong>Total:</strong> ${totalFormatted}</p>
+                <p class="mb-1"><strong>Version:</strong> ${q.version}</p>
+            `;
+
+            // Set status and outcome
+            document.getElementById('statusSelect').value = q.status;
+            document.getElementById('outcomeSelect').value = q.outcome || 'Pending';
+            document.getElementById('followUpDate').value = q.follow_up_date || '';
+            document.getElementById('quotationNotes').value = q.notes || '';
+
+            // Set items
+            const itemsContainer = document.getElementById('quotationItems');
+            itemsContainer.innerHTML = '';
+            data.items.forEach(item => {
+                const price = (typeof item.price === 'number') ? `₹${item.price.toFixed(2)}` : '';
+                const total = (typeof item.total === 'number') ? `₹${item.total.toFixed(2)}` : '';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.serial_no}</td>
+                    <td>${item.description}</td>
+                    <td>${item.quantity || ''}</td>
+                    <td>${price}</td>
+                    <td>${item.gst_percentage || ''}%</td>
+                    <td>${total}</td>
+                `;
+                itemsContainer.appendChild(row);
+            });
+
+            // Set history
+            const historyContainer = document.getElementById('quotationHistory');
+            historyContainer.innerHTML = '';
+            if (data.history && data.history.length > 0) {
+                data.history.forEach(event => {
+                    const eventDate = new Date(event.event_date);
+                    const formattedDate = isNaN(eventDate) ? 'Invalid date' : eventDate.toLocaleString();
+                    const eventDiv = document.createElement('div');
+                    eventDiv.className = 'timeline-item';
+                    eventDiv.innerHTML = `
+                        <div class="card card-body p-2 mb-2">
+                            <div class="d-flex justify-content-between">
+                                <strong>${event.event_type}</strong>
+                                <small class="text-muted">${formattedDate}</small>
+                            </div>
+                            <p class="mb-0">${event.details || ''}</p>
+                        </div>
+                    `;
+                    historyContainer.appendChild(eventDiv);
+                });
+            } else {
+                historyContainer.innerHTML = '<div class="alert alert-info">No history available</div>';
+            }
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('quotationDetailsModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error loading quotation details:', error);
+            alert('Failed to load quotation details: ' + error.message);
+        });
+}
+
+// Save quotation changes
+function saveQuotationChanges() {
+    const status = document.getElementById('statusSelect').value;
+    const outcome = document.getElementById('outcomeSelect').value;
+    const followUpDate = document.getElementById('followUpDate').value;
+    const notes = document.getElementById('quotationNotes').value;
+
+    fetch(`/api/quotations/${currentQuotationId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            status: status,
+            outcome: outcome,
+            follow_up_date: followUpDate,
+            notes: notes
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadQuotations(); // Make sure this function reloads the quotation list
+            const modal = bootstrap.Modal.getInstance(document.getElementById('quotationDetailsModal'));
+            modal.hide();
+        } else {
+            alert('Update failed: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error updating quotation:', error);
+        alert('Failed to update quotation. Please try again.');
+    });
+}
+
+        // Load reminders
+        function loadReminders() {
+            fetch('/api/reminders/check')
+                .then(response => response.json())
+                .then(data => {
+                    reminders = data.reminders;
+                    renderReminders();
+                })
+                .catch(error => {
+                    console.error('Error loading reminders:', error);
+                    document.getElementById('remindersList').innerHTML = `
+                        <div class="alert alert-danger">Failed to load reminders. Please try again.</div>
+                    `;
+                });
+        }
+
+        // Render reminders
+        function renderReminders() {
+            const container = document.getElementById('remindersList');
+            container.innerHTML = '';
+            
+            if (reminders.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No upcoming reminders</div>';
+                return;
+            }
+            
+            reminders.forEach(reminder => {
+                const card = document.createElement('div');
+                card.className = 'card mb-2';
+                card.innerHTML = `
+                    <div class="card-body p-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">${reminder.quotation_number}</h6>
+                                <p class="mb-1 small">${reminder.customer_name}</p>
+                                <p class="mb-1 small text-muted">
+                                    <i class="bi bi-calendar"></i> 
+                                    ${new Date(reminder.reminder_date).toLocaleDateString()}
+                                </p>
+                            </div>
+                            <span class="badge bg-primary">${reminder.reminder_type}</span>
+                        </div>
+                        ${reminder.notes ? `<p class="mb-0 small">${reminder.notes}</p>` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Load quotation options for reminder modal
+        function loadQuotationOptions() {
+            fetch('/api/quotations')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('reminderQuotation');
+                    select.innerHTML = '';
+                    
+                    data.forEach(quotation => {
+                        const option = document.createElement('option');
+                        option.value = quotation.id;
+                        option.textContent = `${quotation.quotation_number} - ${quotation.customer_name}`;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading quotation options:', error);
+                });
+        }
+
+        // Create new reminder
+        function createReminder() {
+            const quotationId = document.getElementById('reminderQuotation').value;
+            const reminderType = document.getElementById('reminderType').value;
+            const reminderDate = document.getElementById('reminderDate').value;
+            const notes = document.getElementById('reminderNotes').value;
+            
+            if (!quotationId || !reminderDate) {
+                alert('Please select a quotation and set a reminder date');
+                return;
+            }
+            
+            fetch(`/api/quotations/${quotationId}/reminders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    reminder_date: reminderDate,
+                    reminder_type: reminderType,
+                    notes: notes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadReminders();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('newReminderModal'));
+                    modal.hide();
+                    
+                    // Clear form
+                    document.getElementById('reminderDate').value = '';
+                    document.getElementById('reminderNotes').value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error creating reminder:', error);
+                alert('Failed to create reminder. Please try again.');
+            });
+        }
+
+        // Helper functions
+        function getStatusBadgeColor(status) {
+            switch(status) {
+                case 'Sent': return 'primary';
+                case 'Accepted': return 'success';
+                case 'Declined': return 'danger';
+                case 'Revised': return 'warning';
+                default: return 'secondary';
+            }
+        }
+
+        function getOutcomeBadgeClass(outcome) {
+            switch(outcome) {
+                case 'Won': return 'badge-outcome-won';
+                case 'Lost': return 'badge-outcome-lost';
+                case 'Negotiating': return 'badge-outcome-negotiating';
+                default: return 'badge-outcome-pending';
+            }
+        }
+    </script>
+
+{% endblock %}

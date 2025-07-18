@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logged Out | QuotationPro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+        .logout-container {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            text-align: center;
+            width: 100%;
+            max-width: 450px;
+        }
+        .logo {
+            color: #2563eb;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            color: #2563eb;
+            margin-top: 0;
+            font-weight: 600;
+            font-size: 1.8rem;
+        }
+        .message {
+            margin: 1.5rem 0;
+            line-height: 1.6;
+            color: #4b5563;
+        }
+        .user-name {
+            font-weight: 600;
+            color: #2563eb;
+        }
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 1rem;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="logout-container">
+        <div class="logo">QuotationPro</div>
+        <h1>You're Logged Out</h1>
+        
+        <div class="message">
+            <p>Thank you for your work today, <span class="user-name">{{ name }}</span>.</p>
+            <p>Your contributions help our sales team create winning proposals.</p>
+        </div>
+
+        <a href="{{ url_for('login') }}" class="btn">Return to Login</a>
+        
+        <div class="footer">
+            <p>For security, please close your browser if you're on a shared device.</p>
+            <p>&copy; 2025 QuotationPro. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

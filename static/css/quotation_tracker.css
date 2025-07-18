@@ -1,0 +1,30 @@
+/* quotation_tracker.css - ONLY FOR QUOTATION TRACKER PAGE */
+.quotation-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid;
+}
+
+.quotation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.status-draft { border-left-color: #6c757d; }
+.status-sent { border-left-color: #0d6efd; }
+.status-accepted { border-left-color: #198754; }
+.status-declined { border-left-color: #dc3545; }
+.status-revised { border-left-color: #ffc107; }
+
+/* Timeline styles */
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+/* Status badge styles */
+.badge-outcome-pending { background-color: #6c757d; }
+.badge-outcome-won { background-color: #198754; }
+.badge-outcome-lost { background-color: #dc3545; }
+.badge-outcome-negotiating { background-color: #ffc107; color: #000; }
+
+        

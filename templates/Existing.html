@@ -1,0 +1,251 @@
+{% extends "dashboard.html" %}
+{% block content %}
+
+    <div class="content-area">
+        <div class="container-fluid py-4">
+            <div class="card">
+                <div class="card-header bg-white border-bottom-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Create New Quotation</h4>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <form id="quotationForm" class="needs-validation" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="category" class="form-label">System Type</label>
+                                <select id="category" class="form-select" required>
+                                    <option value="" selected disabled>Select system type</option>
+                                    <option value="On-Grid">On-Grid</option>
+                                    <option value="Hybrid">Hybrid</option>
+                                    <option value="Off-Grid">Off-Grid</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a system type.</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="capacity" class="form-label">System Capacity</label>
+                                <select id="capacity" class="form-select" required>
+                                    <option value="" selected disabled>Select capacity</option>
+                                    <option value="3kW">3kW</option>
+                                    <option value="4kW">4kW</option>
+                                    <option value="5kW">5kW</option>
+                                    <option value="7kW">7kW</option>
+                                    <option value="10kW">10kW</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a capacity.</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="customer_name" class="form-label">Customer Name</label>
+                                <input type="text" class="form-control" id="customer_name" required>
+                                <div class="invalid-feedback">Please provide customer name.</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="customer_village" class="form-label">Village/Town</label>
+                                <input type="text" class="form-control" id="customer_village">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="customer_email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="customer_email" required>
+                                <div class="invalid-feedback">Please provide a valid email.</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="customer_phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="customer_phone" required>
+                                <div class="invalid-feedback">Please provide phone number.</div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <button type="button" id="fetchItems" class="btn btn-primary">
+                                    <i class="bi bi-search me-2"></i>Fetch System Components
+                                </button>
+                            </div>
+                            
+                            <div class="col-12 mt-4">
+                                <h5 class="mb-3">System Components</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="itemTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Description</th>
+                                                <th>Qty</th>
+                                                <th>Price</th>
+                                                <th>GST %</th>
+                                                <th>GST Amt</th>
+                                                <th>Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="itemList">
+                                            <tr>
+                                                <td colspan="7" class="text-center py-4 text-muted">
+                                                    Select system type and capacity to view components
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr class="table-light">
+                                                <td colspan="6" class="text-end fw-bold">Grand Total:</td>
+                                                <td class="fw-bold" id="grandTotal">₹0.00</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 text-end mt-4">
+                                <button type="submit" id="generateQuotation" class="btn btn-success">
+                                    <i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate Quotation
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Form validation
+            var form = document.getElementById('quotationForm');
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+
+            $('#category, #capacity').change(function() {
+                const category = $('#category').val();
+                const capacity = $('#capacity').val();
+                
+                if (!category || !capacity) return;
+                
+                $('#itemList').html(`
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+                
+                $.ajax({
+                    url: '/fetch_items',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ category: category, capacity: capacity }),
+                    success: function(response) {
+                        const items = response.items;
+                        let itemRows = '';
+                        let grandTotal = 0;
+                        
+                        items.forEach((item, index) => {
+                            grandTotal += parseFloat(item.total) || 0;
+                            itemRows += `
+                                <tr class="selected-item">
+                                    <td>${index + 1}</td>
+                                    <td class="description">${item.description}</td>
+                                    <td class="quantity">${item.quantity}</td>
+                                    <td class="price">₹${parseFloat(item.price).toFixed(2)}</td>
+                                    <td class="gst">${item.gst_percentage}%</td>
+                                    <td class="gst-amount">₹${parseFloat(item.gst_amount).toFixed(2)}</td>
+                                    <td class="total">₹${parseFloat(item.total).toFixed(2)}</td>
+                                </tr>`;
+                        });
+                        
+                        $('#itemList').html(itemRows);
+                        $('#grandTotal').text(`₹${grandTotal.toFixed(2)}`);
+                    },
+                    error: function() {
+                        $('#itemList').html(`
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-danger">
+                                    Error loading components. Please try again.
+                                </td>
+                            </tr>
+                        `);
+                    }
+                });
+            });
+
+            $('#generateQuotation').click(function(e) {
+                e.preventDefault();
+                
+                if (!form.checkValidity()) {
+                    form.classList.add('was-validated');
+                    return;
+                }
+                
+                $(this).html(`
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Generating...
+                `).prop('disabled', true);
+                
+                const customerDetails = {
+                    category: $('#category').val(),
+                    capacity: $('#capacity').val(),
+                    customer_name: $('#customer_name').val(),
+                    customer_village: $('#customer_village').val(),
+                    customer_email: $('#customer_email').val(),
+                    customer_phone: $('#customer_phone').val(),
+                    total_amount: $('#grandTotal').text().replace('₹', ''),
+                    items: collectSelectedItems()
+                };
+                
+                $.ajax({
+                    url: '/dgenerate_pdf',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(customerDetails),
+                    xhrFields: { responseType: 'blob' },
+                    success: function(blob) {
+                        let link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = `Quotation_${customerDetails.customer_name.replace(/\s+/g, '_')}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // Show success toast/alert
+                        alert("Quotation generated successfully!");
+                    },
+                    error: function() {
+                        alert("Error generating quotation. Please try again.");
+                    },
+                    complete: function() {
+                        $('#generateQuotation').html(`
+                            <i class="bi bi-file-earmark-pdf-fill me-2"></i>Generate Quotation
+                        `).prop('disabled', false);
+                    }
+                });
+            });
+            
+            function collectSelectedItems() {
+                let items = [];
+                $('.selected-item').each(function(index) {
+                    items.push({
+                        serial_no: index + 1,
+                        description: $(this).find('.description').text(),
+                        quantity: parseInt($(this).find('.quantity').text()),
+                        price: parseFloat($(this).find('.price').text().replace('₹', '')),
+                        gst_percentage: parseFloat($(this).find('.gst').text()),
+                        gst_amount: parseFloat($(this).find('.gst-amount').text().replace('₹', '')),
+                        total: parseFloat($(this).find('.total').text().replace('₹', ''))
+                    });
+                });
+                return items;
+            }
+        });
+    </script>
+{% endblock %}
