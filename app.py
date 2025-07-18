@@ -349,29 +349,76 @@ def allowed_file(filename):
 def user_profile():
     if 'loggedin' not in session:
         return redirect(url_for('login'))
-
+ 
     userid = session['userid']
     cursor = mysql.connection.cursor()
-
+ 
     try:
+        # Get user profile info
         cursor.execute("SELECT name, lastname, email, phone_number FROM user WHERE userid = %s", (userid,))
         user = cursor.fetchone()
-
-        if user:
-            return render_template(
-                'user_profile.html',
-                name=user[0],
-                lastname=user[1],
-                email=user[2],
-                phone_number=user[3]
-            )
-        else:
+ 
+        if not user:
             flash("User not found.")
             return redirect(url_for('login'))
-
+ 
+        name, lastname, email, phone_number = user
+ 
+        # Total quotations from both tables
+        cursor.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT id FROM quotations WHERE user_id = %s
+                UNION ALL
+                SELECT id FROM Existing_quotations WHERE user_id = %s
+            ) AS combined
+        """, (userid, userid))
+        total_quotations = cursor.fetchone()[0]
+ 
+        # Accepted quotations count
+        cursor.execute("""
+            SELECT COUNT(*) FROM quotations WHERE user_id = %s AND status = 'Accepted'
+        """, (userid,))
+        accepted = cursor.fetchone()[0]
+        # cursor.execute(""" SELECT quotation_number FROM quotations WHERE user_id = %s AND status ='Accepted' ORDER BY created_at DESC LIMIT 1 """(userid,))
+        # recent_accept=cursor.fetchone(
+        # recent_accept=recent_accept[0] if recent_accept else '-'    
+        # )
+ 
+        cursor.execute("""
+    SELECT quotation_number
+    FROM quotations
+    WHERE user_id = %s AND status = 'Accepted'
+    ORDER BY created_at DESC
+    LIMIT 1
+""", (userid,))
+        recent_accept = cursor.fetchone()
+        recent_accept = recent_accept[0] if recent_accept else '-'
+ 
+        # Most recent quotation number
+        cursor.execute("""
+            SELECT quotation_number
+            FROM quotations
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (userid,))
+        recent = cursor.fetchone()
+        recent_quotation_number = recent[0] if recent else '—'
+ 
+        return render_template(
+            'user_profile.html',
+            name=name,
+            lastname=lastname,
+            email=email,
+            phone_number=phone_number,
+            total_quotations=total_quotations,
+            accepted=accepted,
+            recent_quotation_number=recent_quotation_number,
+            recent_accept=recent_accept
+        )
+ 
     finally:
         cursor.close()
-
 @app.route('/update_user_details', methods=['POST'])
 def update_user_details():
     if 'userid' not in session:
