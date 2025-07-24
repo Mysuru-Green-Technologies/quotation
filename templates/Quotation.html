@@ -199,6 +199,39 @@
                 padding: 6px 8px;
             }
         }
+ .discount-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+ 
+.discount-options {
+    display: none;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+}
+ 
+.discount-options select,
+.discount-options input {
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1px solid var(--gray-light);
+    border-radius: 6px;
+    height: 36px;
+    background-color: white;
+    transition: var(--transition);
+}
+ 
+.discount-options select:focus,
+.discount-options input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+    outline: none;
+}
+ 
+        
     </style>
 </head>
 <body>
@@ -269,13 +302,33 @@
             <tbody></tbody>
         </table>
 
-        <!-- Action Buttons -->
-        <div class="actions">
-            <button class="btn btn-primary" onclick="addItem()">Add Item</button>
-            <div>
-                <span class="text-bold" style="margin-right: 15px;">Grand Total: <span id="grand-total" class="text-large">0.00</span></span>
-                <button class="btn btn-success" onclick="generatePDF()">Generate Quotation</button>
+       <div class="actions">
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="addItem()">Add Item</button>
+        <div class="discount-wrapper">
+ 
+    <div class="discount-wrapper">
+    <button type="button" class="btn btn-primary" onclick="showDiscountOptions()">Apply Discount</button>
+ 
+    <div id="discount-options" class="discount-options">
+        <select id="discount-type">
+            <option value="">-- Select Discount Type --</option>
+            <option value="percentage">Percentage (%)</option>
+            <option value="rupees">Rupees (₹)</option>
+        </select>
+ 
+        <input type="number" id="discount-value" placeholder="Enter Discount" min="0">
+        <button type="button" class="btn btn-primary" onclick="applyDiscount()">Apply</button>
+    </div>
+</div>
+ 
+
+        </div>
             </div>
+            <span class="text-bold" style="margin-right: 15px;">Grand Total: <span id="grand-total" class="text-large">0.00</span>
+                <button class="btn btn-success" onclick="generatePDF()">Generate Quotation</button>
+            
+            
         </div>
     </div>
 
@@ -496,7 +549,10 @@
                 subject: subject,
                 greeting: greeting,
                 total_amount: parseFloat(document.getElementById('grand-total').textContent),
-                items: itemsData
+                items: itemsData,
+                discount_type: appliedDiscount.type,
+                discount_value: appliedDiscount.value,
+                grand_total: parseFloat(document.getElementById("grand-total").textContent)
             };
 
             // Send data to server
@@ -542,6 +598,58 @@
                 input.value = value.charAt(0).toUpperCase() + value.slice(1);
             }
         }
+        let appliedDiscount = {
+    type: null,
+    value: 0
+};
+
+function showDiscountOptions() {
+    document.getElementById("discount-options").style.display = "block";
+}
+
+function applyDiscount() {
+    const type = document.getElementById("discount-type").value;
+    const value = parseFloat(document.getElementById("discount-value").value);
+
+    if (!type || isNaN(value) || value < 0) {
+        alert("Please select a valid discount type and value.");
+        return;
+    }
+
+    appliedDiscount.type = type;
+    appliedDiscount.value = value;
+
+    calculateTotal(); // update grand total
+}
+
+function calculateTotal() {
+    let grandTotal = 0;
+    const rows = document.querySelectorAll("#items-table tbody tr");
+
+    rows.forEach(row => {
+        const checkbox = row.querySelector('.as-per-actuals');
+        const totalInput = row.querySelector('.total');
+
+        if (!checkbox.checked && totalInput.value !== "Actuals") {
+            const total = parseFloat(totalInput.value) || 0;
+            grandTotal += total;
+        }
+    });
+
+    // Apply discount
+    const { type, value } = appliedDiscount;
+
+    if (type === 'percentage') {
+        grandTotal -= (grandTotal * value / 100);
+    } else if (type === 'rupees') {
+        grandTotal -= value;
+    }
+
+    if (grandTotal < 0) grandTotal = 0;
+
+    document.getElementById("grand-total").textContent = grandTotal.toFixed(2);
+}
+
     </script>
 
 
