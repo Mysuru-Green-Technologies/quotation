@@ -30,12 +30,21 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 from babel.numbers import format_currency
 import uuid
 from flask import request, session, redirect, url_for, render_template
+from customer.routes import customer_bp
 
 
-app = Flask(__name__, template_folder=r'D:\Quotation_v5\templates')
+app = Flask(__name__, template_folder=r'templates')
+app.register_blueprint(customer_bp)
+
+@app.template_filter('datetime_format')
+def datetime_format(value, format='%Y-%m-%d'):
+    if value is None:
+        return ''
+    return value.strftime(format)
+app.config["TEMPLATES_AUTO_RELOAD"] = True 
 app.config["TEMPLATES_AUTO_RELOAD"] = True  
 
-app.secret_key = 'prakruthi' 
+app.secret_key = 'MRET' 
 
 # MySQL Configuration
 app.config['MYSQL_HOST'] = '192.168.0.174'
@@ -93,30 +102,66 @@ def inject_request():
 def index():
     return render_template('login.html')
 
-
-
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST' and 'email' in request.form and 'password' in request.form:
+    if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        cursor = mysql.connection.cursor()
-        cursor.execute('SELECT * FROM user WHERE email = %s', (email,))
-        user = cursor.fetchone()
-        cursor.close()
+
+        cur = mysql.connection.cursor()
+        cur.execute("SELECT userid, name, lastname, email, phone_number, password, role FROM user WHERE email = %s", (email,))
+        user = cur.fetchone()
+        cur.close()
 
         if user and check_password_hash(user[5], password):
-            session['loggedin'] = True
             session['userid'] = user[0]
             session['name'] = user[1]
-            session['lastname'] = user[2]  # Add this
             session['email'] = user[3]
-            session['phone'] = user[4]
-            return redirect(url_for('dashboard'))
+            session['role'] = user[6]
+
+            if user[6] == 'admin':
+                session['admin'] = True
+                flash('Admin login successful!', 'success')
+                return redirect(url_for('create_user'))
+            elif user[6] == 'employee':
+                session['employee'] = True
+                flash('Employee login successful!', 'success')
+                return redirect(url_for('dashboard'))
         else:
-            message = 'Please enter correct email / password!'
-            return render_template('login.html', message=message)
+            flash('Invalid email or password!', 'danger')
+
     return render_template('login.html')
+
+@app.route('/admin/create_user', methods=['GET', 'POST'])
+def create_user():
+    if 'admin' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        first = request.form['first']
+        last = request.form['last']
+        email = request.form['email']
+        role = request.form['role']
+        password = request.form['password']
+        department=request.form['department']
+        hashed_password = generate_password_hash(password)
+
+        cur = mysql.connection.cursor()
+        try:
+            cur.execute("INSERT INTO user (name, lastname, email, role, password,department) VALUES (%s, %s, %s, %s, %s,%s)",
+            (first, last, email, role, hashed_password,department))
+
+            mysql.connection.commit()
+            flash('User created successfully', 'success')
+        except Exception as e:
+            mysql.connection.rollback()
+            flash(f'Error: {str(e)}', 'danger')
+        finally:
+            cur.close()
+
+    return render_template('create_user.html')
+
+
 
 @app.route('/dashboard/logout')
 def user_logout():
@@ -140,6 +185,7 @@ def register():
         email = request.form.get('email')
         phone_number = request.form.get('phone')
         password = request.form.get('password')
+        role=request.form.get('role')
 
         cursor = mysql.connection.cursor()
         cursor.execute('SELECT * FROM user WHERE email = %s', (email,))
@@ -154,8 +200,8 @@ def register():
         else:
             hashed_password = generate_password_hash(password)
             cursor.execute(
-                'INSERT INTO user (name, lastname, email, phone_number, password) VALUES (%s, %s, %s, %s, %s)',
-                (name, lastname, email, phone_number, hashed_password))
+                'INSERT INTO user (name, lastname, email, phone_number, password,role) VALUES (%s, %s, %s, %s, %s,%s)',
+                (name, lastname, email, phone_number, hashed_password,role))
             mysql.connection.commit()
             cursor.close()
             message = 'You have successfully registered!'
@@ -166,7 +212,8 @@ def register():
     
 @app.route('/dashboard')
 def dashboard():
-    if 'loggedin' in session:
+    if not session.get('loggedin') or session.get('role') != 'employee':
+        flash("Please log in as employee", "danger")
         user_id = session['userid']
         cursor = mysql.connection.cursor()
 
@@ -344,26 +391,25 @@ def upload_avatar():
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 @app.route('/dashboard/user_profile')
 def user_profile():
-    if 'loggedin' not in session:
+    if 'userid' not in session:
         return redirect(url_for('login'))
- 
+
     userid = session['userid']
     cursor = mysql.connection.cursor()
- 
+
     try:
         # Get user profile info
-        cursor.execute("SELECT name, lastname, email, phone_number FROM user WHERE userid = %s", (userid,))
+        cursor.execute("SELECT name, lastname, email, phone_number,last_updated,department FROM user WHERE userid = %s", (userid,))
         user = cursor.fetchone()
- 
+
         if not user:
             flash("User not found.")
             return redirect(url_for('login'))
- 
-        name, lastname, email, phone_number = user
- 
+
+        name, lastname, email, phone_number, last_updated,department  = user
+
         # Total quotations from both tables
         cursor.execute("""
             SELECT COUNT(*) FROM (
@@ -373,52 +419,54 @@ def user_profile():
             ) AS combined
         """, (userid, userid))
         total_quotations = cursor.fetchone()[0]
- 
+
         # Accepted quotations count
         cursor.execute("""
             SELECT COUNT(*) FROM quotations WHERE user_id = %s AND status = 'Accepted'
         """, (userid,))
         accepted = cursor.fetchone()[0]
-        # cursor.execute(""" SELECT quotation_number FROM quotations WHERE user_id = %s AND status ='Accepted' ORDER BY created_at DESC LIMIT 1 """(userid,))
-        # recent_accept=cursor.fetchone(
-        # recent_accept=recent_accept[0] if recent_accept else '-'    
-        # )
- 
         cursor.execute("""
-    SELECT quotation_number
-    FROM quotations
-    WHERE user_id = %s AND status = 'Accepted'
-    ORDER BY created_at DESC
+    SELECT quotation_number , created_at
+    FROM quotations 
+    WHERE user_id = %s AND status = 'Accepted' 
+    ORDER BY created_at DESC 
     LIMIT 1
 """, (userid,))
         recent_accept = cursor.fetchone()
-        recent_accept = recent_accept[0] if recent_accept else '-'
- 
+        recent_accept_number = recent_accept[0] if recent_accept else '-'
+        recent_accept_time = recent_accept[1] if recent_accept else None
+        
         # Most recent quotation number
         cursor.execute("""
-            SELECT quotation_number
-            FROM quotations
+            SELECT quotation_number , created_at
+            FROM quotations 
             WHERE user_id = %s
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC 
             LIMIT 1
         """, (userid,))
         recent = cursor.fetchone()
         recent_quotation_number = recent[0] if recent else '—'
- 
+        recent_created_time = recent[1] if recent else None
+
         return render_template(
             'user_profile.html',
             name=name,
             lastname=lastname,
+            department=department,
             email=email,
             phone_number=phone_number,
             total_quotations=total_quotations,
             accepted=accepted,
             recent_quotation_number=recent_quotation_number,
-            recent_accept=recent_accept
+            recent_created_time=recent_created_time,
+            recent_accept=recent_accept_number,
+            recent_accept_time=recent_accept_time,
+            last_updated=last_updated,
         )
- 
+
     finally:
         cursor.close()
+
 @app.route('/update_user_details', methods=['POST'])
 def update_user_details():
     if 'userid' not in session:
@@ -559,7 +607,6 @@ def get_quotation(quotation_id):
 
 
 
-
 @app.route('/api/quotations/<int:quotation_id>/status', methods=['PUT'])
 def update_quotation_status(quotation_id):
     data = request.get_json()
@@ -586,9 +633,9 @@ def update_quotation_status(quotation_id):
         # Add to tracking history
         cur.execute("""
             INSERT INTO quotation_tracking 
-            (quotation_id, event_type, details)
-            VALUES (%s, 'Status Changed', %s)
-        """, (quotation_id, f"Status changed from {current_status} to {new_status}. Notes: {notes}"))
+            (quotation_id, event_type, details,user_id)
+            VALUES (%s, 'Status Changed', %s,%s)
+        """, (quotation_id, f"Status changed from {current_status} to {new_status}. Notes: {notes}",session['userid']))
         
         mysql.connection.commit()
         return jsonify({'success': True})
@@ -651,7 +698,7 @@ def add_reminder(quotation_id):
             quotation_id,
             f"Reminder set for {data['reminder_date']}. Type: {data['reminder_type']}"
         ))
-
+       
         mysql.connection.commit()
         return jsonify({'success': True, 'message': 'Reminder created successfully'})
     except Exception as e:
@@ -685,7 +732,7 @@ def check_reminders():
             'customer_name': reminder[8],
             'reminder_date': reminder[2].strftime('%Y-%m-%d'),
             'reminder_type': reminder[3],
-            'notes': reminder[4]
+            'notes': reminder[5]
         })
 
     cur.close()
@@ -705,6 +752,11 @@ def generate_pdf():
     total_amount = data['total_amount']
     items = data['items']
     user_id = session.get('userid')  
+    discount_type = data.get('discount_type')
+    discount_value = float(data.get('discount_value', 0))
+    total_amount = sum(float(item.get('total')or 0) for item in data['items'])
+        
+    
 
     if not user_id:
         print("user id not found"),400
@@ -754,7 +806,18 @@ def generate_pdf():
  
     mysql.connection.commit()
     cur.close()
- 
+
+    original_total = total_amount
+    if discount_type == 'percentage':
+        discount_amount = (total_amount * discount_value) / 100
+    elif discount_type == 'rupees':
+        discount_amount = discount_value
+    else:
+        discount_amount = 0
+
+    grand_total = total_amount - discount_amount
+    if grand_total < 0:
+        grand_total = 0
     buffer = BytesIO()
     pdf = SimpleDocTemplate(buffer, pagesize=letter)
     elements = []
@@ -876,10 +939,10 @@ def generate_pdf():
         else:
             description = Paragraph(desc_raw, styles['Normal'])
             quantity = str(item.get('quantity', ''))
-            price = format_inr(float(item.get('price', 0)))
+            price = format_inr(float(item.get('price') or 0.0))
             gst_percentage = str(item.get('gst_percentage', ''))
-            gst_amount = format_inr(float(item.get('gst_amount', 0)))
-            total = format_inr(float(item.get('total', 0)))
+            gst_amount = format_inr(float(item.get('gst_amount', 0.0)))
+            total = format_inr(float(item.get('total', 0.0)))
  
             table_data.append([
                 serial_no, description, quantity, price, gst_percentage, gst_amount, total
@@ -896,6 +959,12 @@ def generate_pdf():
     # Add "Only" at the end
     if not total_in_words.endswith(" Only"):
         total_in_words += " Only"
+
+        discount_note = ""
+        if discount_type == 'percentage':
+           discount_note = f"Discount Applied: {discount_value:.2f}%"
+        elif discount_type == 'rupees':
+           discount_note = f"Discount Applied in Rupees: {discount_value:.2f}"
 
     # Format numeric value with rupee symbol
     total_formatted = format_currency(total_amount, 'INR', locale='en_IN').replace('₹', '').strip()
@@ -916,14 +985,36 @@ def generate_pdf():
         fontSize=11,
         leading=14
     )
- 
-     # Create the grand total table
-    grand_total_table = Table([
-        [
-            Paragraph(f"<b>Grand Total (Rupees):</b><br/>{total_in_words}", left_style),
-            Paragraph(f"<b>{total_formatted}</b>", centered_style)
-        ]
-    ], colWidths=[400, 140])
+    right_style = ParagraphStyle(  # <-- ✅ Add this
+    name='Right',
+    parent=styles['Normal'],
+    alignment=TA_RIGHT,
+    fontSize=11,
+    leading=14
+    )
+
+
+    grand_total_data = []
+
+# If a discount is applied, show original total and discount
+    if discount_amount > 0:
+       grand_total_data.append(
+        [Paragraph("<b> Total:</b>", left_style), Paragraph(f"{original_total:.2f}", right_style)]
+    )
+       grand_total_data.append(
+        [Paragraph(f"<b>{discount_note}</b>", left_style), Paragraph(f"- {discount_amount:.2f}", right_style)]
+    )
+
+# Always show grand total with amount in words
+    grand_total_data.append(
+    [Paragraph("<b>Grand Total:</b><br/>{}".format(total_in_words), left_style),
+     Paragraph(f"<b>{grand_total:.2f}</b>", right_style)]
+)
+
+    grand_total_table = Table(grand_total_data, colWidths=[400, 150])
+
+
+
 
     grand_total_table.setStyle(TableStyle([
         ('FONTNAME', (5, 0), (-1, -1), 'Helvetica-Bold'),
@@ -1227,6 +1318,144 @@ def process_form():
 
     # Redirect to another page after processing
     return redirect(url_for('dashboard'))
+
+@app.route('/admin_base')
+def admin_base():
+    return redirect(url_for('admin_base'))
+
+@app.route('/admin/employee')
+def admin_employee():
+    if 'admin' not in session:
+        return redirect(url_for('login'))
+    
+    cur = mysql.connection.cursor()
+    
+    # Get all employee created by this admin
+    cur.execute("""
+        SELECT u.userid, u.name, u.lastname, u.email, u.role, u.phone_number, 
+               COUNT(q.id) as quotation_count
+        FROM user u
+        LEFT JOIN quotations q ON u.userid = q.user_id
+        WHERE u.role = 'employee'
+        GROUP BY u.userid
+        ORDER BY u.name
+    """)
+    
+    employee_list = []
+    for row in cur.fetchall():
+        employee_data = {
+            'userid': row[0],
+            'name': row[1],
+            'lastname': row[2],
+            'email': row[3],
+            'role': row[4],
+            'phone_number': row[5],
+            'quotation_count': row[6]
+        }
+        employee_list.append(employee_data)
+        # print (employee_list)
+
+    return render_template('employee.html', employee=employee_list)
+
+
+@app.route('/admin/employee/<int:employee_id>')
+def admin_employee_detail(employee_id):
+    if 'admin' not in session:
+        return redirect(url_for('login'))
+    
+    cur = mysql.connection.cursor()
+    
+    # Get employee details
+    cur.execute("""
+    SELECT u.userid, u.name, u.lastname, u.email, u.role, u.phone_number,u.created_at
+    FROM user u
+    WHERE u.userid = %s AND u.role = 'employee'
+""", (employee_id,))
+
+    
+    employee = cur.fetchone()
+    if not employee:
+        flash('Employee not found', 'danger')
+        return redirect(url_for('admin_employee'))
+    
+    employee = {
+    'userid': employee[0],
+    'name': employee[1],
+    'lastname': employee[2],
+    'email': employee[3],
+    'role': employee[4],
+    'phone_number': employee[5],
+    'created_at': employee[6].strftime('%Y-%m-%d') if employee[6] else None
+}
+
+    
+    # Get quotation stats
+    cur.execute("""
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Accepted' THEN 1 ELSE 0 END) as accepted,
+            SUM(CASE WHEN status = 'Declined' THEN 1 ELSE 0 END) as declined
+        FROM quotations
+        WHERE user_id = %s
+    """, (employee_id,))
+    stats = cur.fetchone()
+    employee['quotation_count'] = stats[0]
+    employee['accepted_quotations'] = stats[1]
+    employee['declined_quotations'] = stats[2]
+    
+    # Get recent quotations
+    cur.execute("""
+        SELECT quotation_number, customer_name, quotation_date, total_amount, status
+        FROM quotations
+        WHERE user_id = %s
+        ORDER BY created_at DESC
+        LIMIT 5
+    """, (employee_id,))
+    
+    recent_quotations = []
+    for row in cur.fetchall():
+        quotation = {
+            'quotation_number': row[0],
+            'customer_name': row[1],
+            'quotation_date': row[2].strftime('%Y-%m-%d') if row[2] else None,
+            'total_amount': row[3],
+            'status': row[4]
+        }
+        recent_quotations.append(quotation)
+    
+    cur.close()
+    return render_template('employee_detail.html', 
+                         employee=employee, 
+                         recent_quotations=recent_quotations)
+
+@app.route('/admin/employee/<int:employee_id>', methods=['DELETE'])
+def delete_employee(employee_id):
+    if 'admin' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    cur = mysql.connection.cursor()
+    try:
+        # First check if employee exists and is not an admin
+        cur.execute("SELECT role FROM user WHERE userid = %s", (employee_id,))
+        employee = cur.fetchone()
+        
+        if not employee:
+            return jsonify({'error': 'Employee not found'}), 404
+            
+        if employee[0] == 'admin':
+            return jsonify({'error': 'Cannot delete admin users'}), 400
+            
+        # Delete the employee
+        cur.execute("DELETE FROM user WHERE userid = %s", (employee_id,))
+        mysql.connection.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+
 
 @app.route('/logout')
 def logout():

@@ -1,0 +1,134 @@
+{% extends "dashboard.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Customer Management</h1>
+        <div>
+            <a href="{{ url_for('customer.add_customer') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Customer
+            </a>
+   <a href="{{ url_for('customer.export_customers') }}" class="btn btn-success">
+    <i class="fas fa-file-excel"></i> Export to Excel
+</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Customer List</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow animated--fade-in" 
+                            aria-labelledby="dropdownMenuLink">
+                            <li><a class="dropdown-item" href="#">Filter Active</a></li>
+                            <li><a class="dropdown-item" href="#">Filter Inactive</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#">Export All</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="customerTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Company</th>
+                                    <th>Contact</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for customer in customers %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('customer.customer_detail', customer_id=customer.customer_id) }}">
+                                            {{ customer.first_name }} {{ customer.last_name }}
+                                        </a>
+                                        {% if customer.pending_followups > 0 %}
+                                        <span class="badge bg-danger ms-2">{{ customer.pending_followups }} Followup{% if customer.pending_followups > 1 %}s{% endif %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ customer.company_name or '-' }}</td>
+                                    <td>
+                                        {% if customer.email %}{{ customer.email }}<br>{% endif %}
+                                        {% if customer.phone %}{{ customer.phone }}{% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if customer.status == 'active' %}bg-success
+                                            {% elif customer.status == 'inactive' %}bg-secondary
+                                            {% elif customer.status == 'lead' %}bg-warning text-dark
+                                            {% else %}bg-info text-dark{% endif %}">
+                                            {{ customer.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('customer.customer_detail', customer_id=customer.customer_id) }}" 
+                                           class="btn btn-sm btn-primary" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('customer.edit_customer', customer_id=customer.customer_id) }}" 
+                                           class="btn btn-sm btn-secondary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Followups -->
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Upcoming Followups</h6>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_followups %}
+                    <div class="list-group">
+                        {% for followup in upcoming_followups %}
+                        <div class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ followup.first_name }} {{ followup.last_name }}</h6>
+                                <small>{{ followup.followup_date|datetime_format('%b %d') }}</small>
+                            </div>
+                            <p class="mb-1">{{ followup.followup_type|title }}</p>
+                            <small>{{ followup.followup_notes or 'No notes' }}</small>
+                            <form method="POST" action="{{ url_for('customer.complete_followup', followup_id=followup.followup_id) }}" class="mt-2">
+                                <button type="submit" class="btn btn-sm btn-success">Mark Complete</button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No upcoming followups</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('#customerTable').DataTable({
+            responsive: true
+        });
+    });
+</script>
+{% endblock %}

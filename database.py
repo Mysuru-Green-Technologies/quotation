@@ -2,10 +2,10 @@ import pymysql
 
 # Connect to MySQL
 conn = pymysql.connect(
-    host='localhost',
-    user='root',
-    password='root',
-    database='userre',
+    host='192.168.0.174',
+    user='remote_control',
+    password='Remote_control',
+    database='quotation_data',
     autocommit=True
 )
 
@@ -19,7 +19,11 @@ CREATE TABLE IF NOT EXISTS user (
     lastname VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     phone_number VARCHAR(15),
-    password VARCHAR(100) NOT NULL
+    password VARCHAR(100) NOT NULL,
+    role VARCHAR(50)NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    department VARCHAR(100)                  
 )
 """)
 
@@ -135,6 +139,74 @@ CREATE TABLE IF NOT EXISTS Existing_quotation_items (
     gst_amount DECIMAL(10,2),
     total DECIMAL(10,2),
     FOREIGN KEY (quotation_id) REFERENCES Existing_quotations(id) ON DELETE CASCADE
+)
+""")
+# -- Customers table
+cur.execute("""
+CREATE TABLE IF NOT EXISTS customers (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    company_name VARCHAR(100),
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    address TEXT,
+    city VARCHAR(50),
+    state VARCHAR(50),
+    country VARCHAR(50),
+    postal_code VARCHAR(20),
+    tax_id VARCHAR(50),
+    website VARCHAR(100),
+    status ENUM('active', 'inactive', 'lead', 'prospect') DEFAULT 'lead',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    user_id INT,
+    FOREIGN KEY (user_id) REFERENCES user(userid)
+)
+""")
+
+# -- Customer notes table
+cur.execute("""
+CREATE TABLE IF NOT EXISTS customer_notes (
+    note_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    user_id INT NOT NULL,
+    note_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    FOREIGN KEY (user_id) REFERENCES user(userid)
+)
+""")
+
+# -- Follow-ups/reminders table
+cur.execute("""
+CREATE TABLE IF NOT EXISTS customer_followups (
+    followup_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    user_id INT NOT NULL,
+    followup_date DATETIME NOT NULL,
+    followup_type ENUM('call', 'email', 'meeting', 'other') NOT NULL,
+    followup_notes TEXT,
+    status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    FOREIGN KEY (user_id) REFERENCES user(userid)
+)
+""")
+
+# -- Notifications table
+cur.execute("""
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    related_entity_type ENUM('customer', 'quotation', 'followup'),
+    related_entity_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(userid)
 )
 """)
 

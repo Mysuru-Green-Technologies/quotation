@@ -1,0 +1,60 @@
+{% extends "dashboard.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Notifications</h1>
+        <div>
+            <a href="{{ url_for('customer.customer_list') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Customers
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">All Notifications</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow animated--fade-in" 
+                            aria-labelledby="dropdownMenuLink">
+                            <li><a class="dropdown-item" href="{{ url_for('customer.mark_all_read') }}">Mark All as Read</a></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('customer.clear_all_notifications') }}" onclick="return confirm('Are you sure you want to clear all notifications?');">Clear All</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if notifications %}
+                    <div class="list-group">
+                        {% for notification in notifications %}
+                        <div class="list-group-item list-group-item-action {% if not notification.is_read %}bg-light{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ notification.title }}</h6>
+                                <small>{{ notification.created_at|datetime_format }}</small>
+                            </div>
+                            <p class="mb-1">{{ notification.message }}</p>
+                            {% if notification.related_entity_type and notification.related_entity_id %}
+                                {% if notification.related_entity_type == 'customer' %}
+                                    <small><a href="{{ url_for('customer.customer_detail', customer_id=notification.related_entity_id) }}">View details</a></small>
+                                {% elif notification.related_entity_type == 'quotation' %}
+                                    <small><a href="{{ url_for('quotation.view', quotation_id=notification.related_entity_id) }}">View details</a></small>
+                                {% elif notification.related_entity_type == 'followup' %}
+                                   <small><a href="{{ url_for('customer.detail', followup_id=notification.related_entity_id) }}">View details</a></small>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No notifications</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

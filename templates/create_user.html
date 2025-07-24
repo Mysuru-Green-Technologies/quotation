@@ -1,0 +1,333 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="card create-user-card">
+    <div class="card-header">
+        <h2 class="card-title">Create New Employee</h2>
+        <div class="card-icon">
+            <i class="fas fa-user-tie"></i>
+        </div>
+    </div>
+    
+    <form method="POST" class="employee-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="first" class="form-label">First Name</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="first" name="first" class="form-control" placeholder="Enter first name" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="last" class="form-label">Last Name</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="last" name="last" class="form-control" placeholder="Enter last name" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="email" class="form-label">Email Address</label>
+            <div class="input-with-icon">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="email" name="email" class="form-control" placeholder="Enter email address" required pattern="^[a-zA-Z0-9]+@mret\.in$"
+       title="Email must be in the format username@mret.in (letters and numbers only)">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="role" class="form-label">Role</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-briefcase"></i>
+                    <select id="role" name="role" class="form-control" required>
+                        <option value="" disabled selected>Select role</option>
+                        <option value="admin">Admin</option>
+                        <option value="manager">Manager</option>
+                        <option value="employee">Employee</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="department" class="form-label">Department</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-building"></i>
+                    <select id="department" name="department" class="form-control">
+                        <option value="" selected>Select department (optional)</option>
+                        <option value="hr">Electrical</option>
+                        <option value="it">Information Technology</option>
+                        <option value="finance">Finance</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="operations">Operations</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <div class="input-with-icon password-field">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" required>
+                <i class="fas fa-eye toggle-password" onclick="togglePassword()"></i>
+            </div>
+            <div class="password-strength">
+                <div class="strength-meter">
+                    <span class="strength-segment"></span>
+                    <span class="strength-segment"></span>
+                    <span class="strength-segment"></span>
+                    <span class="strength-segment"></span>
+                </div>
+                <small class="strength-text">Password strength: <span id="strength-text">Weak</span></small>
+            </div>
+            <div class="password-hints">
+                <small>Use at least 8 characters with a mix of letters, numbers & symbols</small>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="reset" class="btn btn-secondary">
+                <i class="fas fa-undo"></i> Reset Form
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Create Employee
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const icon = document.querySelector('.toggle-password');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    // Password strength indicator
+    document.getElementById('password').addEventListener('input', function() {
+        const password = this.value;
+        const strengthMeter = document.querySelector('.password-strength');
+        const segments = document.querySelectorAll('.strength-segment');
+        const strengthText = document.getElementById('strength-text');
+        
+        if (password.length === 0) {
+            strengthMeter.style.display = 'none';
+            return;
+        }
+        
+        strengthMeter.style.display = 'flex';
+        
+        // Reset all segments
+        segments.forEach(segment => {
+            segment.style.backgroundColor = '#e2e8f0';
+        });
+        
+        let strength = 0;
+        
+        // Length check
+        if (password.length >= 8) strength += 1;
+        if (password.length >= 12) strength += 1;
+        
+        // Complexity checks
+        if (/[A-Z]/.test(password)) strength += 1;
+        if (/\d/.test(password)) strength += 1;
+        if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+        
+        // Update UI
+        const colors = ['#ef4444', '#f97316', '#f59e0b', '#10b981'];
+        const texts = ['Very Weak', 'Weak', 'Good', 'Strong'];
+        
+        const strengthLevel = Math.min(Math.floor(strength / 2), 3);
+        
+        for (let i = 0; i <= strengthLevel; i++) {
+            segments[i].style.backgroundColor = colors[strengthLevel];
+        }
+        
+        strengthText.textContent = texts[strengthLevel];
+        strengthText.style.color = colors[strengthLevel];
+    });
+
+    // Form submission animation
+    document.querySelector('.employee-form').addEventListener('submit', function(e) {
+        const btn = this.querySelector('button[type="submit"]');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+        btn.disabled = true;
+    });
+
+    // Input focus effects
+    document.querySelectorAll('.form-control').forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.style.borderColor = '#4f46e5';
+            this.parentElement.style.boxShadow = '0 0 0 2px rgba(79, 70, 229, 0.2)';
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.style.borderColor = '#e2e8f0';
+            this.parentElement.style.boxShadow = 'none';
+        });
+    });
+</script>
+
+<style>
+    .create-user-card {
+        max-width: 800px;
+        margin: 0 auto;
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .create-user-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+    }
+    
+    .card-header {
+        position: relative;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+    }
+    
+    .card-title {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    
+    .card-icon {
+        position: absolute;
+        right: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 2rem;
+        opacity: 0.2;
+    }
+    
+    .employee-form {
+        padding: 2rem;
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-row .form-group {
+        flex: 1;
+    }
+    
+    .input-with-icon {
+        position: relative;
+        display: flex;
+        align-items: center;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .input-with-icon i {
+        padding: 0 1rem;
+        color: #64748b;
+    }
+    
+    .input-with-icon .form-control {
+        border: none;
+        padding-left: 0;
+        flex: 1;
+    }
+    
+    .input-with-icon .form-control:focus {
+        box-shadow: none;
+    }
+    
+    .input-with-icon:focus-within {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+    }
+    
+    .password-field {
+        position: relative;
+    }
+    
+    .toggle-password {
+        position: absolute;
+        right: 1rem;
+        cursor: pointer;
+        color: #64748b;
+    }
+    
+    .password-strength {
+        display: none;
+        align-items: center;
+        gap: 0.8rem;
+        margin-top: 0.5rem;
+    }
+    
+    .strength-meter {
+        display: flex;
+        gap: 4px;
+        flex: 1;
+    }
+    
+    .strength-segment {
+        height: 4px;
+        background-color: #e2e8f0;
+        border-radius: 2px;
+        flex: 1;
+        transition: background-color 0.3s ease;
+    }
+    
+    .strength-text {
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+    
+    .password-hints {
+        margin-top: 0.5rem;
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn-secondary {
+        background-color: #e2e8f0;
+        color: #334155;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #cbd5e1;
+        transform: translateY(-2px);
+    }
+    
+    @media (max-width: 768px) {
+        .form-row {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .create-user-card {
+            border-radius: 0;
+        }
+    }
+</style>
+{% endblock %}

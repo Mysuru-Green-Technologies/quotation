@@ -1,0 +1,117 @@
+{% extends "dashboard.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <a href="{{ url_for('customer.customer_list') }}" class="text-decoration-none text-gray-600">
+                <i class="fas fa-arrow-left me-2"></i>
+            </a>
+            {% if customer %}Edit Customer{% else %}Add New Customer{% endif %}
+        </h1>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Customer Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% if customer %}{{ url_for('customer.edit_customer', customer_id=customer.customer_id) }}{% else %}{{ url_for('customer.add_customer') }}{% endif %}">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name *</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ customer.first_name if customer }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ customer.last_name if customer }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="company_name" class="form-label">Company Name</label>
+                            <input type="text" class="form-control" id="company_name" name="company_name" 
+                                   value="{{ customer.company_name if customer }}">
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ customer.email if customer }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label">Phone</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" 
+                                       value="{{ customer.phone if customer }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="2">{{ customer.address if customer }}</textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="city" class="form-label">City</label>
+                                <input type="text" class="form-control" id="city" name="city" 
+                                       value="{{ customer.city if customer }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="state" class="form-label">State/Province</label>
+                                <input type="text" class="form-control" id="state" name="state" 
+                                       value="{{ customer.state if customer }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="postal_code" class="form-label">Postal Code</label>
+                                <input type="text" class="form-control" id="postal_code" name="postal_code" 
+                                       value="{{ customer.postal_code if customer }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="country" class="form-label">Country</label>
+                                <input type="text" class="form-control" id="country" name="country" 
+                                       value="{{ customer.country if customer }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="tax_id" class="form-label">Tax ID</label>
+                                <input type="text" class="form-control" id="tax_id" name="tax_id" 
+                                       value="{{ customer.tax_id if customer }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="website" class="form-label">Website</label>
+                                <input type="url" class="form-control" id="website" name="website" 
+                                       value="{{ customer.website if customer }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="lead" {% if customer and customer.status == 'lead' %}selected{% endif %}>Lead</option>
+                                    <option value="prospect" {% if customer and customer.status == 'prospect' %}selected{% endif %}>Prospect</option>
+                                    <option value="active" {% if customer and customer.status == 'active' %}selected{% endif %}>Active</option>
+                                    <option value="inactive" {% if customer and customer.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            {% if customer %}Update Customer{% else %}Add Customer{% endif %}
+                        </button>
+                        <a href="{{ url_for('customer.customer_list') }}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
