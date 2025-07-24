@@ -141,6 +141,7 @@ def create_user():
         first = request.form['first']
         last = request.form['last']
         email = request.form['email']
+        phone_number = request.form['phone']
         role = request.form['role']
         password = request.form['password']
         department=request.form['department']
@@ -148,8 +149,8 @@ def create_user():
 
         cur = mysql.connection.cursor()
         try:
-            cur.execute("INSERT INTO user (name, lastname, email, role, password,department) VALUES (%s, %s, %s, %s, %s,%s)",
-            (first, last, email, role, hashed_password,department))
+            cur.execute("INSERT INTO user (name, lastname, email,phone_number, role, password,department) VALUES (%s, %s, %s, %s, %s, %s,%s)",
+            (first, last, email,phone_number, role, hashed_password,department))
 
             mysql.connection.commit()
             flash('User created successfully', 'success')
