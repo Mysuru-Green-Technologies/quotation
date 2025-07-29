@@ -954,7 +954,7 @@ def generate_pdf():
     elements.append(item_table)
     elements.append(Spacer(1, 20))
         # Format total in words
-    total_in_words = num2words(total_amount, to='currency', lang='en_IN', currency='INR')
+    total_in_words = num2words(grand_total, to='currency', lang='en_IN', currency='INR')
     total_in_words = total_in_words.replace("paise", "Paise").replace("rupees", "Rupees").title()
 
     # Add "Only" at the end
